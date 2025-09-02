@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../data/repositories/livestream_repository.dart';
 import '../../../../data/repositories/church_repository.dart';
@@ -9,7 +10,6 @@ import '../../../../domain/entities/livestream.dart';
 import '../../../../domain/entities/church.dart';
 import '../../../../core/utils/member_count_formatter.dart';
 import '../../../../core/utils/title_formatter.dart';
-import '../../livestream/livestream_detail_page.dart';
 import '../../church_detail/church_detail_page.dart';
 
 class LiveStreamsSection extends StatefulWidget {
@@ -297,21 +297,34 @@ class _LiveStreamCardState extends State<_LiveStreamCard> {
     }
   }
 
+  Future<void> _openLiveStreamDirectly(BuildContext context) async {
+    try {
+      final url = Uri.parse(widget.livestream.streamUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try to open in browser
+        await launchUrl(url, mode: LaunchMode.inAppWebView);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open live stream: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 280,
       margin: const EdgeInsets.only(right: 16),
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  LivestreamDetailPage(livestream: widget.livestream),
-            ),
-          );
-        },
+        onTap: () => _openLiveStreamDirectly(context),
         child: Card(
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -535,47 +548,39 @@ class _LiveChurchCard extends StatelessWidget {
     );
   }
 
-  void _openLiveStream(BuildContext context) {
-    if (church.liveStreamUrl != null) {
-      // Create a livestream object from the church's live data
-      final livestream = Livestream(
-        id: 'live-${church.id}',
-        churchId: church.id,
-        title: church.liveStreamTitle != null
-            ? TitleFormatter.shortenForHeader(church.liveStreamTitle!)
-            : 'Live Stream',
-        description: 'Live stream from ${church.name}',
-        platform: StreamPlatform.youtube,
-        streamUrl: church.liveStreamUrl!,
-        isLive: church.isCurrentlyLive,
-        status: StreamStatus.live,
-        isFeatured: false,
-        viewerCount: 0,
-        maxViewers: 0,
-        isRecurring: false,
-        recurrencePattern: RecurrenceType.none,
-        isChatEnabled: false,
-        tags: const [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        thumbnailUrl: church.logoUrl,
-        youtubeVideoId: _extractYouTubeVideoId(church.liveStreamUrl!),
-      );
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => LivestreamDetailPage(livestream: livestream),
-        ),
-      );
+  void _openLiveStream(BuildContext context) async {
+    if (church.liveStreamUrl != null && church.liveStreamUrl!.isNotEmpty) {
+      try {
+        final url = Uri.parse(church.liveStreamUrl!);
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+          // Fallback: try to open in browser
+          await launchUrl(url, mode: LaunchMode.inAppWebView);
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open live stream: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Live stream not available for ${church.name}. URL: ${church.liveStreamUrl ?? "null"}',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     }
-  }
-
-  String? _extractYouTubeVideoId(String url) {
-    final regExp = RegExp(
-      r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
-    );
-    final match = regExp.firstMatch(url);
-    return match?.group(1);
   }
 
   @override
@@ -584,7 +589,7 @@ class _LiveChurchCard extends StatelessWidget {
       width: 280,
       margin: const EdgeInsets.only(right: 16),
       child: GestureDetector(
-        onTap: () => _openChurchProfile(context),
+        onTap: () => _openLiveStream(context),
         child: Card(
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -737,37 +742,21 @@ class _LiveChurchCard extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const Spacer(),
-                          // Watch Live button
+                          // Church profile button
                           GestureDetector(
-                            onTap: () => _openLiveStream(context),
+                            onTap: () => _openChurchProfile(context),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(8),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 12,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Watch',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                  ),
-                                ],
+                              child: Icon(
+                                Icons.info_outline,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 16,
                               ),
                             ),
                           ),

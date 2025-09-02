@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../data/repositories/church_repository.dart';
 import '../../../../data/repositories/favorites_repository.dart';
 import '../../../../domain/entities/church.dart';
-import '../../../../domain/entities/livestream.dart';
 import '../../../../core/utils/member_count_formatter.dart';
 import '../../../../core/utils/title_formatter.dart';
-import '../../livestream/livestream_detail_page.dart';
 
 class LiveChurchesSection extends StatefulWidget {
   final String? denominationFilter;
@@ -220,51 +219,39 @@ class _LiveChurchesSectionState extends State<LiveChurchesSection> {
     );
   }
 
-  void _openLiveStream(Church church) {
-    // Navigate to livestream detail page if church has live stream URL
-    if (church.liveStreamUrl != null) {
-      // Create a mock livestream object from the church's live data
-      final livestream = Livestream(
-        id: 'live-${church.id}',
-        churchId: church.id,
-        title: church.liveStreamTitle != null
-            ? TitleFormatter.shortenForHeader(church.liveStreamTitle!)
-            : 'Live Stream',
-        description: 'Live stream from ${church.name}',
-        platform: StreamPlatform.youtube,
-        streamUrl: church.liveStreamUrl!,
-        isLive: church.isCurrentlyLive,
-        status: StreamStatus.live,
-        isFeatured: false,
-        viewerCount: 0,
-        maxViewers: 0,
-        isRecurring: false,
-        recurrencePattern: RecurrenceType.none,
-        isChatEnabled: false,
-        tags: const [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        thumbnailUrl: church.logoUrl,
-        youtubeVideoId: _extractYouTubeVideoId(church.liveStreamUrl!),
-      );
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => LivestreamDetailPage(livestream: livestream),
-        ),
-      );
+  void _openLiveStream(Church church) async {
+    if (church.liveStreamUrl != null && church.liveStreamUrl!.isNotEmpty) {
+      try {
+        final url = Uri.parse(church.liveStreamUrl!);
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        } else {
+          // Fallback: try to open in browser
+          await launchUrl(url, mode: LaunchMode.inAppWebView);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open live stream: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     } else {
-      // Show a message that the stream is not available
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Stream not available at the moment')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Stream not available for ${church.name}. URL: ${church.liveStreamUrl ?? "null"}',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     }
-  }
-
-  String? _extractYouTubeVideoId(String url) {
-    final regex = RegExp(r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)');
-    final match = regex.firstMatch(url);
-    return match?.group(1);
   }
 }
 

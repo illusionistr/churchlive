@@ -183,6 +183,11 @@ class ChurchRepository {
             liveStreamsCount: 0,
             followersCount: 0,
             isCurrentlyLive: true, // We know it's live from the query
+            liveStreamTitle: json['live_stream_title'],
+            liveStreamUrl: json['live_stream_url'],
+            lastLiveCheck: json['last_live_check'] != null
+                ? DateTime.tryParse(json['last_live_check'])
+                : null,
           );
         }
       }).toList();
