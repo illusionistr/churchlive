@@ -9,6 +9,7 @@ import 'data/repositories/livestream_repository.dart';
 import 'data/repositories/denomination_repository.dart';
 import 'data/repositories/favorites_repository.dart';
 import 'data/repositories/church_submission_repository.dart';
+import 'data/repositories/youtube_repository.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -47,6 +48,7 @@ Future<void> setupManualDependencies() async {
   getIt.registerLazySingleton<ChurchSubmissionRepository>(
     () => ChurchSubmissionRepository(),
   );
+  getIt.registerLazySingleton<YouTubeRepository>(() => YouTubeRepository());
 
   logger.i('Dependencies configured successfully');
   logger.i('Supabase connected to: ${Environment.supabaseUrl}');

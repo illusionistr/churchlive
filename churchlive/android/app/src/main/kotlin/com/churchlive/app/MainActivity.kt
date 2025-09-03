@@ -1,4 +1,4 @@
-package com.example.churchlive
+package com.churchlive.app
 
 import io.flutter.embedding.android.FlutterActivity
 

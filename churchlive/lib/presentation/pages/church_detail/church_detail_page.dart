@@ -15,6 +15,7 @@ import '../../../core/utils/service_time_formatter.dart';
 import '../../../core/utils/title_formatter.dart';
 import '../livestream/livestream_detail_page.dart';
 import 'widgets/church_hero_section.dart';
+import 'widgets/previous_streams_tab.dart';
 import 'widgets/church_action_buttons.dart';
 
 class ChurchDetailPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _ChurchDetailPageState extends State<ChurchDetailPage>
   void initState() {
     super.initState();
     _church = widget.church;
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _checkFavoriteStatus();
     _loadChurchData();
   }
@@ -466,7 +467,8 @@ class _ChurchDetailPageState extends State<ChurchDetailPage>
                 tabs: const [
                   Tab(text: 'About'),
                   Tab(text: 'Services'),
-                  Tab(text: 'Streams'),
+                  Tab(text: 'Live'),
+                  Tab(text: 'Previous'),
                   Tab(text: 'Contact'),
                 ],
               ),
@@ -484,8 +486,11 @@ class _ChurchDetailPageState extends State<ChurchDetailPage>
                 // Services tab
                 _buildServicesTab(),
 
-                // Streams tab
+                // Live Streams tab
                 _buildStreamsTab(),
+
+                // Previous Streams tab
+                PreviousStreamsTab(church: _church),
 
                 // Contact tab
                 _buildContactTab(),
