@@ -179,7 +179,7 @@ class _DenominationSelectionPageState extends State<DenominationSelectionPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
@@ -241,14 +241,20 @@ class _DenominationSelectionPageState extends State<DenominationSelectionPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                 ),
               ),
 
               const SizedBox(height: 24),
 
               // Denominations Grid
-              Expanded(
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: 300,
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
                 child: _isLoadingDenominations
                     ? const Center(child: CircularProgressIndicator())
                     : _buildDenominationsGrid(),
@@ -327,7 +333,8 @@ class _DenominationSelectionPageState extends State<DenominationSelectionPage> {
           ),
 
         // Grid
-        Expanded(
+        SizedBox(
+          height: 300, // Fixed height for the grid
           child: GridView.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
@@ -362,7 +369,7 @@ class _DenominationSelectionPageState extends State<DenominationSelectionPage> {
                   ),
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                      : null,
+                      : Theme.of(context).colorScheme.surface,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(

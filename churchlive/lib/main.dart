@@ -19,8 +19,8 @@ void main() async {
     await setupManualDependencies();
     logger.i('Dependency injection configured');
 
-    // Initialize theme manager
-    final themeManager = ThemeManager();
+    // Get theme manager from dependency injection and initialize it
+    final themeManager = getIt.get<ThemeManager>();
     await themeManager.initialize();
     logger.i('Theme manager initialized');
 

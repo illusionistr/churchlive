@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/supabase_client.dart';
 import '../../domain/entities/church.dart';
 import '../models/church_model.dart';
@@ -8,6 +9,20 @@ import '../models/church_model.dart';
 class ChurchRepository {
   final SupabaseService _supabaseService = GetIt.instance<SupabaseService>();
   final Logger _logger = GetIt.instance<Logger>();
+
+  /// Get user's filter preferences from SharedPreferences
+  Future<Map<String, String?>> _getUserFilters() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return {
+        'country': prefs.getString('selected_country'),
+        'language': prefs.getString('selected_language'),
+      };
+    } catch (e) {
+      _logger.w('Error reading user filters: $e');
+      return {'country': null, 'language': null};
+    }
+  }
 
   /// Map denomination ID strings to database names
   String _mapDenominationIdToName(String denominationId) {
@@ -50,8 +65,15 @@ class ChurchRepository {
     int offset = 0,
   }) async {
     try {
+      // Get user's filter preferences
+      final userFilters = await _getUserFilters();
+
+      // Use user preferences if no explicit filters provided
+      final effectiveCountryFilter = countryFilter ?? userFilters['country'];
+      final effectiveLanguageFilter = languageFilter ?? userFilters['language'];
+
       _logger.i(
-        'Fetching churches with filters: denomination=$denominationFilter, country=$countryFilter',
+        'Fetching churches with filters: denomination=$denominationFilter, country=$effectiveCountryFilter, language=$effectiveLanguageFilter',
       );
 
       var queryBuilder = _supabaseService.database
@@ -71,14 +93,18 @@ class ChurchRepository {
         queryBuilder = queryBuilder.eq('denominations.name', denominationName);
       }
 
-      // Apply country filter
-      if (countryFilter != null && countryFilter.isNotEmpty) {
-        queryBuilder = queryBuilder.eq('country_id', countryFilter);
+      // Apply country filter (using new country_code column)
+      if (effectiveCountryFilter != null && effectiveCountryFilter.isNotEmpty) {
+        queryBuilder = queryBuilder.eq('country_code', effectiveCountryFilter);
       }
 
-      // Apply language filter
-      if (languageFilter != null && languageFilter.isNotEmpty) {
-        queryBuilder = queryBuilder.eq('primary_language_id', languageFilter);
+      // Apply language filter (using new primary_language_code column)
+      if (effectiveLanguageFilter != null &&
+          effectiveLanguageFilter.isNotEmpty) {
+        queryBuilder = queryBuilder.eq(
+          'primary_language_code',
+          effectiveLanguageFilter,
+        );
       }
 
       final response = await queryBuilder
@@ -130,8 +156,11 @@ class ChurchRepository {
     int limit = 20,
   }) async {
     try {
+      // Get user's filter preferences
+      final userFilters = await _getUserFilters();
+
       _logger.i(
-        'Fetching live churches with denomination filter: $denominationFilter',
+        'Fetching live churches with denomination filter: $denominationFilter, country: ${userFilters['country']}, language: ${userFilters['language']}',
       );
 
       // Simply query churches that are currently live
@@ -150,6 +179,19 @@ class ChurchRepository {
       if (denominationFilter != null && denominationFilter.isNotEmpty) {
         String denominationName = _mapDenominationIdToName(denominationFilter);
         queryBuilder = queryBuilder.eq('denominations.name', denominationName);
+      }
+
+      // Apply user's country filter
+      if (userFilters['country'] != null) {
+        queryBuilder = queryBuilder.eq('country_code', userFilters['country']!);
+      }
+
+      // Apply user's language filter
+      if (userFilters['language'] != null) {
+        queryBuilder = queryBuilder.eq(
+          'primary_language_code',
+          userFilters['language']!,
+        );
       }
 
       final response = await queryBuilder
@@ -201,9 +243,14 @@ class ChurchRepository {
   /// Search churches by name or description
   Future<List<Church>> searchChurches(String query) async {
     try {
-      _logger.i('Searching churches with query: $query');
+      // Get user's filter preferences
+      final userFilters = await _getUserFilters();
 
-      final response = await _supabaseService.database
+      _logger.i(
+        'Searching churches with query: $query, country: ${userFilters['country']}, language: ${userFilters['language']}',
+      );
+
+      var queryBuilder = _supabaseService.database
           .from('churches')
           .select('''
              *,
@@ -212,7 +259,22 @@ class ChurchRepository {
              languages!churches_primary_language_id_fkey(id, name, code)
            ''')
           .or('name.ilike.%$query%,description.ilike.%$query%')
-          .eq('is_active', true)
+          .eq('is_active', true);
+
+      // Apply user's country filter
+      if (userFilters['country'] != null) {
+        queryBuilder = queryBuilder.eq('country_code', userFilters['country']!);
+      }
+
+      // Apply user's language filter
+      if (userFilters['language'] != null) {
+        queryBuilder = queryBuilder.eq(
+          'primary_language_code',
+          userFilters['language']!,
+        );
+      }
+
+      final response = await queryBuilder
           .order('member_count', ascending: false)
           .limit(20);
 

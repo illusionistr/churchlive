@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get_it/get_it.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../data/repositories/church_repository.dart';
 import '../../../data/repositories/livestream_repository.dart';
 import '../../../data/repositories/favorites_repository.dart';
@@ -10,8 +9,14 @@ import '../../../domain/entities/church.dart';
 import '../../../domain/entities/livestream.dart';
 import '../../../core/utils/member_count_formatter.dart';
 import '../../../core/utils/title_formatter.dart';
-import '../onboarding/denomination_selection_page.dart';
+import '../settings/denomination_settings_page.dart';
 import '../livestream/livestream_detail_page.dart';
+import '../settings/theme_settings_page.dart';
+import '../settings/language_region_settings_page.dart';
+import '../settings/notification_settings_page.dart';
+import '../settings/about_page.dart';
+import '../../../data/repositories/user_reports_repository.dart';
+import '../church_detail/church_detail_page.dart';
 import 'widgets/live_streams_section.dart';
 import 'widgets/churches_section.dart';
 import '../../widgets/simple_theme_toggle.dart';
@@ -54,7 +59,10 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.favorite),
             label: 'Favorites',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
       ),
     );
@@ -219,7 +227,7 @@ class DiscoverPage extends StatelessWidget {
                 // Go back to denomination selection
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (_) => const DenominationSelectionPage(),
+                    builder: (_) => const DenominationSettingsPage(),
                   ),
                 );
               },
@@ -670,9 +678,10 @@ class _SearchPageState extends State<SearchPage> {
           ],
         ),
         onTap: () {
-          // TODO: Navigate to church detail page
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${church.name} details - Coming soon!')),
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChurchDetailPage(church: church),
+            ),
           );
         },
       ),
@@ -1069,9 +1078,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ],
         ),
         onTap: () {
-          // TODO: Navigate to church detail page
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${church.name} details - Coming soon!')),
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChurchDetailPage(church: church),
+            ),
           );
         },
       ),
@@ -1155,76 +1165,14 @@ class ProfilePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // App info card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: const Icon(
-                      Icons.church,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppConstants.appName,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Discover churches streaming live',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Theme settings
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Appearance',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const SimpleThemeToggle(showLabel: true),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
           // Settings options
           _ProfileOption(
             icon: Icons.church,
             title: 'Change Denomination',
             onTap: () {
-              Navigator.of(context).pushReplacement(
+              Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const DenominationSelectionPage(),
+                  builder: (context) => const DenominationSettingsPage(),
                 ),
               );
             },
@@ -1233,64 +1181,46 @@ class ProfilePage extends StatelessWidget {
             icon: Icons.language,
             title: 'Language & Region',
             onTap: () {
-              // TODO: Navigate to language settings
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const LanguageRegionSettingsPage(),
+                ),
+              );
             },
           ),
           _ProfileOption(
             icon: Icons.notifications,
             title: 'Notifications',
             onTap: () {
-              // TODO: Navigate to notifications settings
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsPage(),
+                ),
+              );
             },
           ),
           _ProfileOption(
             icon: Icons.palette,
             title: 'Theme',
             onTap: () {
-              // TODO: Navigate to theme settings
-            },
-          ),
-          _ProfileOption(
-            icon: Icons.help,
-            title: 'Help & Support',
-            onTap: () {
-              // TODO: Navigate to help
-            },
-          ),
-          _ProfileOption(
-            icon: Icons.privacy_tip,
-            title: 'Privacy Policy',
-            onTap: () {
-              // TODO: Show privacy policy
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ThemeSettingsPage(),
+                ),
+              );
             },
           ),
           _ProfileOption(
             icon: Icons.info,
             title: 'About',
             onTap: () {
-              _showAboutDialog(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const AboutPage()),
+              );
             },
           ),
         ],
       ),
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showAboutDialog(
-      context: context,
-      applicationName: AppConstants.appName,
-      applicationVersion: AppConstants.appVersion,
-      applicationIcon: const Icon(
-        Icons.church,
-        size: 48,
-        color: Color(0xFF6366F1),
-      ),
-      children: [
-        const Text(
-          'Discover churches streaming live around the world. Filter by denomination, language, and location to find the perfect worship experience for you.',
-        ),
-      ],
     );
   }
 }
@@ -1319,5 +1249,138 @@ class _ProfileOption extends StatelessWidget {
         onTap: onTap,
       ),
     );
+  }
+}
+
+class _ReportIssueDialog extends StatefulWidget {
+  @override
+  State<_ReportIssueDialog> createState() => _ReportIssueDialogState();
+}
+
+class _ReportIssueDialogState extends State<_ReportIssueDialog> {
+  final TextEditingController _issueController = TextEditingController();
+  final UserReportsRepository _reportsRepository =
+      GetIt.instance<UserReportsRepository>();
+  String _selectedCategory = 'Bug Report';
+  bool _isSubmitting = false;
+  final List<String> _categories = [
+    'Bug Report',
+    'Feature Request',
+    'Performance Issue',
+    'UI/UX Problem',
+    'Other',
+  ];
+
+  @override
+  void dispose() {
+    _issueController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Report an Issue'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('What went wrong?'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedCategory,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Category',
+              ),
+              items: _categories.map((category) {
+                return DropdownMenuItem(value: category, child: Text(category));
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategory = value!;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _issueController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Describe the issue',
+                hintText: 'Please provide as much detail as possible...',
+              ),
+              maxLines: 4,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _issueController.text.trim().isEmpty || _isSubmitting
+              ? null
+              : () {
+                  _submitIssue(context);
+                },
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Submit'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitIssue(BuildContext context) async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final success = await _reportsRepository.submitReport(
+        category: _selectedCategory,
+        description: _issueController.text.trim(),
+        userId: _reportsRepository.getCurrentUserId(),
+        deviceInfo: _reportsRepository.getDeviceInfo(),
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Issue submitted successfully!\nThank you for helping us improve!'
+                  : 'Failed to submit issue. Please try again.',
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting issue: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 }
